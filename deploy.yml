@@ -1,0 +1,31 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Add SSH key
+        uses: webfactory/ssh-agent@v0.7.0
+        with:
+          ssh-private-key: ${{ secrets.EC2_SSH_KEY }}
+
+      - name: Deploy to EC2
+        run: |
+          ssh -o StrictHostKeyChecking=no ec2-user@18.212.183.160 << 'EOF'
+            cd flask-website
+            git pull origin main
+            source venv/bin/activate
+            pip install -r requirements.txt
+            pkill gunicorn || true
+            nohup gunicorn app:app --bind 0.0.0.0:5000 &
+          EOF
+
